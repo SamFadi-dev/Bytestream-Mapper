@@ -3,8 +3,10 @@
 #include <time.h>
 #include "magic.h"
 
-#define TEST_SIZE 100000
+#define TEST_SIZE 1000000
 
+/// @brief Get the current time in milliseconds
+/// @return Current time in milliseconds
 long long current_time_ms()
 {
     struct timespec ts;
@@ -53,6 +55,7 @@ int main()
 
     MAGICdestroy(m);
 
+    // Print execution time
     long long end = current_time_ms();
     printf("Execution time: %lld ms\n", end - start);
 

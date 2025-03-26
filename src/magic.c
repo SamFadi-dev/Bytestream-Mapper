@@ -246,7 +246,7 @@ int MAGICmap(MAGIC m, enum MAGICDirection direction, int pos)
     } 
     else 
     {
-        // OUT → IN mapping: dynamic binary search
+        // OUT to IN mapping: dynamic binary search
         int low = 0;
         int high = 1;
         while (1)
