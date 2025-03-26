@@ -2,6 +2,7 @@
 // Code based on the red-black tree implementation from INFO0027-2 course
 
 #include <stdlib.h>
+#include <assert.h>
 #include "magic.h"
 
 // Constants for red-black tree
@@ -35,7 +36,10 @@ struct magic
 /// @return New node
 static Node* createNode(MAGIC m, int pos, int delta)
 {
+    assert(m);
+
     Node *node = malloc(sizeof(Node));
+    if (!node) return NULL;
     node->pos = pos;
     node->delta = delta;
     node->totalDelta = delta;
@@ -57,6 +61,8 @@ static void updateTotalDelta(Node *node)
 /// @param x Node to rotate
 static void rotateLeft(MAGIC m, Node *x)
 {
+    assert(m && x);
+
     Node *y = x->right;
     x->right = y->left;
     if (y->left != m->NIL)
@@ -80,6 +86,8 @@ static void rotateLeft(MAGIC m, Node *x)
 /// @param y Node to rotate
 static void rotateRight(MAGIC m, Node *y) 
 {
+    assert(m && y);
+
     Node *x = y->left;
     y->left = x->right;
     if (x->right != m->NIL)
@@ -103,6 +111,8 @@ static void rotateRight(MAGIC m, Node *y)
 /// @param z Node to fix
 static void fixInsert(MAGIC m, Node *z) 
 {
+    assert(m && z);
+
     while (z->parent->color == RED) 
     {
         if (z->parent == z->parent->parent->left) 
@@ -159,7 +169,10 @@ static void fixInsert(MAGIC m, Node *z)
 /// @param delta Delta value
 static void insertDelta(MAGIC m, int pos, int delta)
 {
+    assert(m);
+
     Node *z = createNode(m, pos, delta);
+    if (!z) return;
     Node *y = m->NIL;
     Node *x = m->root;
 
@@ -196,6 +209,8 @@ static void insertDelta(MAGIC m, int pos, int delta)
 /// @return Cumulative delta
 static int getCumulativeDelta(Node *node, Node *NIL, int pos)
 {
+    assert(node && NIL);
+
     if (node == NIL) return 0;
     if (pos <= node->pos)
         return getCumulativeDelta(node->left, NIL, pos);
@@ -221,7 +236,9 @@ static void destroyTree(Node *node, Node *NIL)
 MAGIC MAGICinit()
 {
     MAGIC m = malloc(sizeof(struct magic));
+    if(!m) return NULL;
     m->NIL = malloc(sizeof(Node));
+    if(!m->NIL) return NULL;
     m->NIL->color = BLACK;
     m->NIL->totalDelta = 0;
     m->root = m->NIL;
@@ -230,16 +247,22 @@ MAGIC MAGICinit()
 
 void MAGICadd(MAGIC m, int pos, int length)
 {
+    assert(m);
+
     insertDelta(m, pos, length);
 }
 
 void MAGICremove(MAGIC m, int pos, int length)
 {
+    assert(m);
+
     insertDelta(m, pos, -length);
 }
 
 int MAGICmap(MAGIC m, enum MAGICDirection direction, int pos) 
 {
+    assert(m);
+
     if (direction == STREAM_IN_OUT) 
     {
         return pos + getCumulativeDelta(m->root, m->NIL, pos);
@@ -271,6 +294,8 @@ int MAGICmap(MAGIC m, enum MAGICDirection direction, int pos)
 
 void MAGICdestroy(MAGIC m)
 {
+    assert(m);
+
     destroyTree(m->root, m->NIL);
     free(m->NIL);
     free(m);

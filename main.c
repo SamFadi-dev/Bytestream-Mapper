@@ -21,6 +21,11 @@ int main()
     long long start = current_time_ms();
 
     MAGIC m = MAGICinit();
+    if(!m) 
+    {
+        printf("Error initializing MAGIC\n");
+        return 1;
+    }
 
     printf("Performing %d random add/remove operations...\n", TEST_SIZE);
 
