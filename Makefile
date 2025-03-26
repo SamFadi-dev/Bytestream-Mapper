@@ -2,20 +2,17 @@
 
 CC = gcc
 CFLAGS = -Wall -pedantic -std=c11 -O3
+SRC_DIR = src
+EXEC = magic_test
 
-SRC = magic.c main.c
-OBJ = $(SRC:.c=.o)
-EXEC = test_magic
+SRC = main.c $(SRC_DIR)/magic.c
 
 .PHONY: all clean
 
 all: $(EXEC)
 
-$(EXEC): $(OBJ)
-	$(CC) $(CFLAGS) -o $@ $^
-
-%.o: %.c
-	$(CC) $(CFLAGS) -c $<
+$(EXEC):
+	$(CC) $(CFLAGS) $(SRC) -I$(SRC_DIR) -o $@
 
 clean:
-	rm -f $(OBJ) $(EXEC)
+	rm -f $(EXEC)
