@@ -19,6 +19,7 @@ typedef struct Node
     int totalDelta;    // sum of deltas in subtree
     struct Node *left, *right, *parent;
     int color;         // RED or BLACK
+    
 } Node;
 
 struct magic
@@ -234,23 +235,18 @@ static int getCumulativeDelta(Node *node, Node *NIL, int pos)
 
 static int isActuallyRemoved(Node *node, Node *NIL, int pos)
 {
-    while (node != NIL)
-    {
-        if (node->delta < 0)
-        {
+    while (node != NIL) {
+        if (node->delta < 0) {
             int start = node->pos;
             int end = start - node->delta;
             if (pos >= start && pos < end)
-                return 1; // supprimé
+                return 1;
         }
-
-        if (pos < node->pos)
-            node = node->left;
-        else
-            node = node->right;
+        node = (pos < node->pos) ? node->left : node->right;
     }
     return 0;
 }
+
 
 
 /// @brief Destroy the tree recursively
@@ -302,20 +298,21 @@ void MAGICadd(MAGIC m, int pos, int length)
     }
 }
 
-void MAGICremove(MAGIC m, int pos, int length) 
+void MAGICremove(MAGIC m, int pos, int length)
 {
     assert(m && length > 0);
+
     int input_pos = MAGICmap(m, STREAM_OUT_IN, pos);
-    if (input_pos != -1) 
+    if (input_pos != -1)
     {
         insertDelta(m, input_pos, -length);
     } 
     else 
     {
-        for (int i = pos + 1; i < m->max_input_pos + 10; ++i) 
+        for (int i = pos + 1; i <= m->max_input_pos + 1; ++i)
         {
             int candidate = MAGICmap(m, STREAM_OUT_IN, i);
-            if (candidate != -1) 
+            if (candidate != -1)
             {
                 insertDelta(m, candidate, -length);
                 return;
@@ -324,66 +321,49 @@ void MAGICremove(MAGIC m, int pos, int length)
     }
 }
 
-int MAGICmap(MAGIC m, enum MAGICDirection direction, int pos) 
+int MAGICmap(MAGIC m, enum MAGICDirection direction, int pos)
 {
     assert(m && pos >= 0);
-    if (direction == STREAM_IN_OUT)
-    {
+
+    if (direction == STREAM_IN_OUT) {
         if (isActuallyRemoved(m->root, m->NIL, pos)) return -1;
         return pos + getCumulativeDelta(m->root, m->NIL, pos);
-    }
-    else // STREAM_OUT_IN
-    {
+    } else { // STREAM_OUT_IN
         int low = 0, high = m->max_input_pos;
         if (high < 10) high = 10;
 
-        while (low <= high)
-        {
+        while (low <= high) {
             int mid = (low + high) / 2;
 
-            if (isActuallyRemoved(m->root, m->NIL, mid))
-            {
-                if (mid == low) low++;
-                else if (mid == high) high--;
-                else 
-                {
-                    int left = mid - 1;
-                    int right = mid + 1;
-
-                    while (left >= low || right <= high) 
-                    {
-                        if (left >= low && !isActuallyRemoved(m->root, m->NIL, left)) 
-                        {
-                            int mapped_left = left + getCumulativeDelta(m->root, m->NIL, left);
-                            if (mapped_left == pos) return left;
-                        }
-                        if (right <= high && !isActuallyRemoved(m->root, m->NIL, right)) 
-                        {
-                            int mapped_right = right + getCumulativeDelta(m->root, m->NIL, right);
-                            if (mapped_right == pos) return right;
-                        }
-                        left--;
-                        right++;
+            if (isActuallyRemoved(m->root, m->NIL, mid)) {
+                // saute les positions supprimées
+                if (mid == low) { low++; continue; }
+                if (mid == high) { high--; continue; }
+                int left = mid - 1, right = mid + 1;
+                while (left >= low || right <= high) {
+                    if (left >= low && !isActuallyRemoved(m->root, m->NIL, left)) {
+                        int mapped = left + getCumulativeDelta(m->root, m->NIL, left);
+                        if (mapped == pos) return left;
                     }
-
-                    break;
+                    if (right <= high && !isActuallyRemoved(m->root, m->NIL, right)) {
+                        int mapped = right + getCumulativeDelta(m->root, m->NIL, right);
+                        if (mapped == pos) return right;
+                    }
+                    left--; right++;
                 }
-                continue;
+                break; // Aucun match possible autour
             }
 
             int mapped = mid + getCumulativeDelta(m->root, m->NIL, mid);
-
-            if (mapped == pos)
-                return mid;
-            else if (mapped < pos)
-                low = mid + 1;
-            else
-                high = mid - 1;
+            if (mapped == pos) return mid;
+            else if (mapped < pos) low = mid + 1;
+            else high = mid - 1;
         }
 
         return -1;
     }
 }
+
 
 void MAGICdestroy(MAGIC m)
 {
