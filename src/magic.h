@@ -43,4 +43,10 @@ int MAGICmap(MAGIC m, enum MAGICDirection direction, int pos);
 /// @param m MAGIC instance
 void MAGICdestroy(MAGIC m);
 
+/// @brief Additional function to print the stream for debugging purposes.
+/// @param m MAGIC instance
+/// @param max_input_pos Maximum input position to print
+/// @note This function is not part of the public API and is intended for debugging only.
+void MAGICstream(MAGIC m, int max_input_pos);
+
 #endif // MAGIC_H

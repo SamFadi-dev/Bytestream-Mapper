@@ -1,68 +1,154 @@
 #include <stdio.h>
+#include <assert.h>
+#include "magic.h"
 #include <stdlib.h>
 #include <time.h>
-#include "magic.h"
 
-#define TEST_SIZE 1000000
-
-/// @brief Get the current time in milliseconds
-/// @return Current time in milliseconds
-long long current_time_ms()
+int main() 
 {
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    return ts.tv_sec * 1000LL + ts.tv_nsec / 1000000;
-}
 
-int main()
-{
-    srand(time(NULL));
+    //===================================================
+    //================= IN -> OUT TESTS =================
+    //===================================================
+    printf("==== IN -> OUT TESTS ====\n");
 
-    long long start = current_time_ms();
-
+    // TEST 1 : ONLY REMOVE
     MAGIC m = MAGICinit();
-    if(!m) 
-    {
-        printf("Error initializing MAGIC\n");
-        return 1;
-    }
+    MAGICremove(m, 0, 2);
 
-    printf("Performing %d random add/remove operations...\n", TEST_SIZE);
+    assert(MAGICmap(m, STREAM_IN_OUT, 0) == -1);
+    assert(MAGICmap(m, STREAM_IN_OUT, 1) == -1);
+    assert(MAGICmap(m, STREAM_IN_OUT, 2) == 0);
+    assert(MAGICmap(m, STREAM_IN_OUT, 3) == 1);
+    assert(MAGICmap(m, STREAM_IN_OUT, 4) == 2);
+    MAGICdestroy(m);
+    printf("------Test 1 passed------\n");
 
-    // Perform random add/remove operations
-    for (int i = 0; i < TEST_SIZE; i++) 
-    {
-        int pos = rand() % (TEST_SIZE / 2);
-        int len = (rand() % 5) + 1;
-        if (rand() % 2 == 0)
-        {
-            MAGICadd(m, pos, len);
-        } 
-        else
-        {
-            MAGICremove(m, pos, len);
-        }
-    }
+    // TEST 2 : ONLY ADD
+    m = MAGICinit();
+    MAGICadd(m, 0, 2);
+    MAGICadd(m, 10, 2);
 
-    printf("Mapping input to output for selected positions:\n");
-    for (int i = 0; i <= 100; i += 10)
-    {
-        int out = MAGICmap(m, STREAM_IN_OUT, i);
-        printf("IN %3d to OUT %3d\n", i, out);
-    }
+    assert(MAGICmap(m, STREAM_IN_OUT, 0) == 2);
+    assert(MAGICmap(m, STREAM_IN_OUT, 1) == 3);
+    assert(MAGICmap(m, STREAM_IN_OUT, 2) == 4);
+    assert(MAGICmap(m, STREAM_IN_OUT, 3) == 5);
+    assert(MAGICmap(m, STREAM_IN_OUT, 4) == 6);
+    assert(MAGICmap(m, STREAM_IN_OUT, 5) == 7);
+    assert(MAGICmap(m, STREAM_IN_OUT, 6) == 8);
+    assert(MAGICmap(m, STREAM_IN_OUT, 7) == 9);
+    assert(MAGICmap(m, STREAM_IN_OUT, 8) == 12);
+    assert(MAGICmap(m, STREAM_IN_OUT, 9) == 13);
+    assert(MAGICmap(m, STREAM_IN_OUT, 10) == 14);
+    assert(MAGICmap(m, STREAM_IN_OUT, 11) == 15);
+    MAGICdestroy(m);
+    printf("------Test 2 passed------\n");
 
-    printf("\nMapping output to input for selected positions:\n");
-    for (int i = 0; i <= 100; i += 10)
+
+    // TEST 3 : ADD AND REMOVE
+    m = MAGICinit();
+    MAGICadd(m, 0, 2);
+    MAGICremove(m, 0, 2);
+    assert(MAGICmap(m, STREAM_IN_OUT, 0) == 0);
+    assert(MAGICmap(m, STREAM_IN_OUT, 1) == 1);
+    MAGICdestroy(m);
+    printf("------Test 3 passed------\n");
+
+    // TEST 4 : Brief example
+    m = MAGICinit();
+    MAGICremove(m, 3, 2);
+    MAGICremove(m, 4, 3);
+    MAGICadd(m, 4, 2);
+    MAGICadd(m, 9, 3);
+    assert(MAGICmap(m, STREAM_IN_OUT, 0) == 0); // a
+    assert(MAGICmap(m, STREAM_IN_OUT, 1) == 1); // b
+    assert(MAGICmap(m, STREAM_IN_OUT, 2) == 2); // c
+    assert(MAGICmap(m, STREAM_IN_OUT, 3) == -1); // d
+    assert(MAGICmap(m, STREAM_IN_OUT, 4) == -1); // e
+    assert(MAGICmap(m, STREAM_IN_OUT, 5) == 3); // f
+    assert(MAGICmap(m, STREAM_IN_OUT, 6) == -1); // g
+    assert(MAGICmap(m, STREAM_IN_OUT, 7) == -1); // h
+    assert(MAGICmap(m, STREAM_IN_OUT, 8) == -1); // i
+    assert(MAGICmap(m, STREAM_IN_OUT, 9) == 6); // j
+    assert(MAGICmap(m, STREAM_IN_OUT, 10) == 7); // k
+    assert(MAGICmap(m, STREAM_IN_OUT, 11) == 8); // l
+    assert(MAGICmap(m, STREAM_IN_OUT, 12) == 12); // m
+    assert(MAGICmap(m, STREAM_IN_OUT, 13) == 13); // n
+    assert(MAGICmap(m, STREAM_IN_OUT, 14) == 14); // o
+    assert(MAGICmap(m, STREAM_IN_OUT, 15) == 15); // p
+    assert(MAGICmap(m, STREAM_IN_OUT, 16) == 16); // q
+    MAGICdestroy(m);
+    printf("------Test 4 passed------\n");
+
+    // TEST 5 : Large test
+    m = MAGICinit();
+    for (int i = 0; i < 100000; ++i) 
     {
-        int in = MAGICmap(m, STREAM_OUT_IN, i);
-        printf("OUT %3d to IN %3d\n", i, in);
+        MAGICadd(m, i, 1);
+        MAGICremove(m, i, 1);
     }
+    for (int i = 0; i < 100000; ++i) 
+    {
+        assert(MAGICmap(m, STREAM_IN_OUT, i) == i);
+    }
+    MAGICdestroy(m);
+    printf("------Test 5 passed------\n");
+
+    //===================================================
+    //================= OUT -> IN TESTS =================
+    //===================================================
+    printf("\n------OUT -> IN TESTS------\n");
+
+    // TEST A: ONLY ADD + OUT -> IN mapping
+    m = MAGICinit();
+    MAGICadd(m, 0, 2);      // ajoute 2 éléments au début (R, S)
+    MAGICadd(m, 5, 1);      // ajoute 1 élément au milieu
+
+    assert(MAGICmap(m, STREAM_OUT_IN, 0) == -1); // R (ajouté)
+    assert(MAGICmap(m, STREAM_OUT_IN, 1) == -1); // S (ajouté)
+    assert(MAGICmap(m, STREAM_OUT_IN, 2) == 0);  // a
+    assert(MAGICmap(m, STREAM_OUT_IN, 3) == 1);  // b
+    assert(MAGICmap(m, STREAM_OUT_IN, 4) == 2);  // c
+    printf("OUT -> IN: %d\n", MAGICmap(m, STREAM_OUT_IN, 5));
+    assert(MAGICmap(m, STREAM_OUT_IN, 5) == 3);  // d
+    assert(MAGICmap(m, STREAM_OUT_IN, 6) == -1); // X (ajouté)
+    assert(MAGICmap(m, STREAM_OUT_IN, 7) == 4);  // e
 
     MAGICdestroy(m);
+    printf("------Test A passed------\\n");
 
-    // Print execution time
-    long long end = current_time_ms();
-    printf("Execution time: %lld ms\n", end - start);
+    // TEST B: ONLY REMOVE + OUT -> IN mapping
+    m = MAGICinit();
+    MAGICremove(m, 1, 2);  // supprime b et c
+
+    assert(MAGICmap(m, STREAM_OUT_IN, 0) == 0);  // a
+    assert(MAGICmap(m, STREAM_OUT_IN, 1) == 3);  // d
+    assert(MAGICmap(m, STREAM_OUT_IN, 2) == 4);  // e
+    assert(MAGICmap(m, STREAM_OUT_IN, 3) == 5);  // f
+    assert(MAGICmap(m, STREAM_OUT_IN, 4) == 6);  // g
+    assert(MAGICmap(m, STREAM_OUT_IN, 5) == 7);  // h
+
+    MAGICdestroy(m);
+    printf("------Test B passed------\\n");
+
+    // TEST C: ADD + REMOVE + OUT -> IN
+    m = MAGICinit();
+    MAGICadd(m, 0, 1);      // ajout R
+    MAGICadd(m, 3, 1);      // ajout S
+    MAGICremove(m, 1, 2);   // supprime b et c
+
+    // Flux final attendu : [R, a, S, d, e, f...]
+    assert(MAGICmap(m, STREAM_OUT_IN, 0) == -1); // R
+    assert(MAGICmap(m, STREAM_OUT_IN, 1) == 0);  // a
+    assert(MAGICmap(m, STREAM_OUT_IN, 2) == -1); // S
+    assert(MAGICmap(m, STREAM_OUT_IN, 3) == 3);  // d
+    assert(MAGICmap(m, STREAM_OUT_IN, 4) == 4);  // e
+
+    MAGICdestroy(m);
+    printf("==== OUT -> IN TESTS ====\n");
+
+
+
 
     return 0;
 }

@@ -1,8 +1,10 @@
 /// @authors EL MASRI Sam & SICIM Merve
-// Code based on the red-black tree implementation from INFO0027-2 course
+// Code based on the red-black tree implementation from the INFO0027-2 course
 
 #include <stdlib.h>
 #include <assert.h>
+#include <ctype.h>
+#include <stdio.h>
 #include "magic.h"
 
 // Constants for red-black tree
@@ -23,6 +25,7 @@ struct magic
 {
     Node *root;
     Node *NIL;
+    int max_input_pos;
 };
 
 //==============================================================================
@@ -52,8 +55,10 @@ static Node* createNode(MAGIC m, int pos, int delta)
 /// @param node 
 static void updateTotalDelta(Node *node)
 {
-    if (node)
-        node->totalDelta = node->delta + node->left->totalDelta + node->right->totalDelta;
+    if (node && node->color != BLACK)
+        node->totalDelta = node->delta +
+                           node->left->totalDelta +
+                           node->right->totalDelta;
 }
 
 /// @brief Rotate the tree to the left like in a red-black tree
@@ -169,32 +174,33 @@ static void fixInsert(MAGIC m, Node *z)
 /// @param delta Delta value
 static void insertDelta(MAGIC m, int pos, int delta)
 {
-    assert(m);
-
-    Node *z = createNode(m, pos, delta);
-    if (!z) return;
-    Node *y = m->NIL;
-    Node *x = m->root;
-
+    if (pos > m->max_input_pos) 
+    {
+        m->max_input_pos = pos;
+    }
+    Node *x = m->root, *y = m->NIL;
     while (x != m->NIL)
     {
         y = x;
-        if (z->pos < x->pos)
-            x = x->left;
+        if (pos < x->pos) x = x->left;
+        else if (pos > x->pos) x = x->right;
         else
-            x = x->right;
+        {
+            x->delta += delta;
+            while (x != m->NIL)
+            {
+                updateTotalDelta(x);
+                x = x->parent;
+            }
+            return;
+        }
     }
+    Node *z = createNode(m, pos, delta);
     z->parent = y;
-    if (y == m->NIL)
-        m->root = z;
-    else if (z->pos < y->pos)
-        y->left = z;
-    else
-        y->right = z;
-
+    if (y == m->NIL) m->root = z;
+    else if (pos < y->pos) y->left = z;
+    else y->right = z;
     fixInsert(m, z);
-
-    // Update all totalDeltas up to the root
     while (z != m->NIL)
     {
         updateTotalDelta(z);
@@ -212,11 +218,38 @@ static int getCumulativeDelta(Node *node, Node *NIL, int pos)
     assert(node && NIL);
 
     if (node == NIL) return 0;
-    if (pos <= node->pos)
+    if (pos < node->pos)
         return getCumulativeDelta(node->left, NIL, pos);
     else
         return node->delta + node->left->totalDelta + getCumulativeDelta(node->right, NIL, pos);
 }
+
+static int isActuallyRemoved(Node *node, Node *NIL, int pos)
+{
+    while (node != NIL)
+    {
+        if (pos < node->pos)
+        {
+            node = node->left;
+        }
+        else
+        {
+            if (node->delta < 0) // suppression
+            {
+                int start = node->pos;
+                int end = start - node->delta; // delta est négatif
+                if (pos < end)
+                {
+                    if (pos >= start)
+                        return 1; // pos supprimé
+                }
+            }
+            node = node->right;
+        }
+    }
+    return 0;
+}
+
 
 /// @brief Destroy the tree recursively
 /// @param node Node to destroy
@@ -236,55 +269,81 @@ static void destroyTree(Node *node, Node *NIL)
 MAGIC MAGICinit()
 {
     MAGIC m = malloc(sizeof(struct magic));
-    if(!m) return NULL;
     m->NIL = malloc(sizeof(Node));
-    if(!m->NIL) return NULL;
     m->NIL->color = BLACK;
     m->NIL->totalDelta = 0;
     m->root = m->NIL;
     return m;
 }
 
-void MAGICadd(MAGIC m, int pos, int length)
+void MAGICadd(MAGIC m, int pos, int length) 
 {
-    assert(m);
-
-    insertDelta(m, pos, length);
+    assert(m && length > 0);
+    int input_pos = MAGICmap(m, STREAM_OUT_IN, pos);
+    if (input_pos != -1) 
+    {
+        insertDelta(m, input_pos, length);
+    } 
+    else 
+    {
+        for (int i = pos - 1; i >= 0; --i) 
+        {
+            int candidate = MAGICmap(m, STREAM_OUT_IN, i);
+            if (candidate != -1) 
+            {
+                insertDelta(m, candidate + 1, length);
+                return;
+            }
+        }
+        insertDelta(m, 0, length);
+    }
 }
 
-void MAGICremove(MAGIC m, int pos, int length)
+void MAGICremove(MAGIC m, int pos, int length) 
 {
-    assert(m);
-
-    insertDelta(m, pos, -length);
+    assert(m && length > 0);
+    int input_pos = MAGICmap(m, STREAM_OUT_IN, pos);
+    if (input_pos != -1) 
+    {
+        insertDelta(m, input_pos, -length);
+    } 
+    else 
+    {
+        for (int i = pos + 1; i < m->max_input_pos + 10; ++i) 
+        {
+            int candidate = MAGICmap(m, STREAM_OUT_IN, i);
+            if (candidate != -1) 
+            {
+                insertDelta(m, candidate, -length);
+                return;
+            }
+        }
+    }
 }
 
 int MAGICmap(MAGIC m, enum MAGICDirection direction, int pos) 
 {
-    assert(m);
-
-    if (direction == STREAM_IN_OUT) 
+    assert(m && pos >= 0);
+    if (direction == STREAM_IN_OUT)
     {
+        if (isActuallyRemoved(m->root, m->NIL, pos)) return -1;
         return pos + getCumulativeDelta(m->root, m->NIL, pos);
-    } 
+    }
     else 
     {
-        // OUT to IN mapping: dynamic binary search
-        int low = 0;
-        int high = 1;
-        while (1)
+        int low = 0, high = 1;
+        while (1) 
         {
             int mapped = high + getCumulativeDelta(m->root, m->NIL, high);
             if (mapped >= pos) break;
-            high *= 2; // exponential backoff
-            if (high > 1e9) return -1; // safety cap
+            high *= 2;
+            if (high > 1e9) return -1;
         }
-
-        while (low <= high)
+        while (low <= high) 
         {
             int mid = (low + high) / 2;
             int mapped = mid + getCumulativeDelta(m->root, m->NIL, mid);
-            if (mapped == pos) return mid;
+            if (mapped == pos) return isActuallyRemoved(m->root, m->NIL, mid) ? -1 : mid;
             else if (mapped < pos) low = mid + 1;
             else high = mid - 1;
         }
@@ -294,9 +353,44 @@ int MAGICmap(MAGIC m, enum MAGICDirection direction, int pos)
 
 void MAGICdestroy(MAGIC m)
 {
-    assert(m);
-
     destroyTree(m->root, m->NIL);
     free(m->NIL);
     free(m);
+}
+
+//==============================================================================
+//==============================MAGIC DEBUGGING=================================
+//==============================================================================
+
+void MAGICstream(MAGIC m, int max_in) 
+{
+    char out_chars[2048] = {0};
+    int out_pos_max = 0;
+    for (int i = 0; i <= max_in; ++i) {
+        int mapped = MAGICmap(m, STREAM_IN_OUT, i);
+        if (mapped != -1) {
+            out_chars[mapped] = (i < 26) ? ('a' + i) : '.';
+            if (mapped > out_pos_max) out_pos_max = mapped;
+        }
+    }
+    char next_added = 'R';
+    for (int i = 0; i <= out_pos_max + 10; ++i)
+    {
+        if (!out_chars[i])
+        {
+            int back = MAGICmap(m, STREAM_OUT_IN, i);
+            if (back == -1)
+            {
+                out_chars[i] = (next_added <= 'Z') ? next_added++ : '*';
+                if (i > out_pos_max) out_pos_max = i;
+            }
+        }
+    }
+    printf("OUT pos: ");
+    for (int i = 0; i <= out_pos_max; ++i)
+        printf("%2d ", i);
+    printf("\nOUT:     ");
+    for (int i = 0; i <= out_pos_max; ++i)
+        printf(" %c ", out_chars[i] ? out_chars[i] : '.');
+    printf("\n");
 }
