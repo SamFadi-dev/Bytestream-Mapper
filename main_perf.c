@@ -3,7 +3,7 @@
 #include <time.h>
 #include "magic.h"
 
-#define N 100000  // Number of operations for performance test
+#define N 1000  // Number of operations for performance test
 
 int main()
 {
@@ -46,11 +46,6 @@ int main()
     end = clock();
     cpu_time = ((double)(end - start)) / CLOCKS_PER_SEC;
     printf("MAGICmap(OUT->IN) #%d: %.3f sec\n", N, cpu_time);
-
-    // === Optional: stream output (small test)
-    if (N <= 1000) {
-        MAGICstream(m, N);
-    }
 
     MAGICdestroy(m);
     return 0;

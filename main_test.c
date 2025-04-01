@@ -15,7 +15,6 @@ int main()
     // TEST 1 : ONLY REMOVE
     MAGIC m = MAGICinit();
     MAGICremove(m, 0, 2);
-
     assert(MAGICmap(m, STREAM_IN_OUT, 0) == -1);
     assert(MAGICmap(m, STREAM_IN_OUT, 1) == -1);
     assert(MAGICmap(m, STREAM_IN_OUT, 2) == 0);
@@ -28,7 +27,6 @@ int main()
     m = MAGICinit();
     MAGICadd(m, 0, 2);
     MAGICadd(m, 10, 2);
-
     assert(MAGICmap(m, STREAM_IN_OUT, 0) == 2);
     assert(MAGICmap(m, STREAM_IN_OUT, 1) == 3);
     assert(MAGICmap(m, STREAM_IN_OUT, 2) == 4);
@@ -63,9 +61,11 @@ int main()
     assert(MAGICmap(m, STREAM_IN_OUT, 0) == 0); // a
     assert(MAGICmap(m, STREAM_IN_OUT, 1) == 1); // b
     assert(MAGICmap(m, STREAM_IN_OUT, 2) == 2); // c
+    printf("%d\n", MAGICmap(m, STREAM_IN_OUT, 3));
     assert(MAGICmap(m, STREAM_IN_OUT, 3) == -1); // d
     assert(MAGICmap(m, STREAM_IN_OUT, 4) == -1); // e
     assert(MAGICmap(m, STREAM_IN_OUT, 5) == 3); // f
+    
     assert(MAGICmap(m, STREAM_IN_OUT, 6) == -1); // g
     assert(MAGICmap(m, STREAM_IN_OUT, 7) == -1); // h
     assert(MAGICmap(m, STREAM_IN_OUT, 8) == -1); // i

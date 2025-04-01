@@ -27,6 +27,10 @@ struct magic
     Node *root;
     Node *NIL;
     int max_input_pos;
+    // --- Ajout du cache pour la correspondance OUT->IN ---
+    int *cacheMapping; // tableau: pour chaque position de sortie, la position d'entrée associée (ou -1 si invalide)
+    int cacheSize;     // taille du tableau cache (max_out + 1)
+    int cacheValid;    // indicateur de validité (1 = cache à jour, 0 = invalide)
 };
 
 //==============================================================================
@@ -233,20 +237,54 @@ static int getCumulativeDelta(Node *node, Node *NIL, int pos)
     return sum;
 }
 
-static int isActuallyRemoved(Node *node, Node *NIL, int pos)
-{
-    while (node != NIL) {
-        if (node->delta < 0) {
-            int start = node->pos;
-            int end = start - node->delta;
-            if (pos >= start && pos < end)
-                return 1;
-        }
-        node = (pos < node->pos) ? node->left : node->right;
+static int isActuallyRemoved(Node *node, Node *NIL, int pos) {
+    if (node == NIL)
+        return 0;
+    // Vérifie le nœud courant s'il correspond à une suppression couvrant pos.
+    if (node->delta < 0) {
+        int start = node->pos;
+        int end = start - node->delta;
+        if (pos >= start && pos < end)
+            return 1;
     }
-    return 0;
+    // Recherche dans les deux sous-arbres.
+    return isActuallyRemoved(node->left, NIL, pos) || isActuallyRemoved(node->right, NIL, pos);
 }
 
+
+static void updateCache(MAGIC m) {
+    // Détermine la position de sortie maximum
+    int maxOut = 0;
+    for (int i = 0; i <= m->max_input_pos; i++) {
+        if (!isActuallyRemoved(m->root, m->NIL, i)) {
+            int out = i + getCumulativeDelta(m->root, m->NIL, i);
+            if (out > maxOut) maxOut = out;
+        }
+    }
+    // Alloue ou réalloue le cache
+    if (m->cacheMapping) {
+        free(m->cacheMapping);
+    }
+    m->cacheSize = maxOut + 1;
+    m->cacheMapping = malloc(sizeof(int) * m->cacheSize);
+    if (!m->cacheMapping) {
+        perror("malloc cacheMapping");
+        exit(EXIT_FAILURE);
+    }
+    // Initialise à -1 (position d'entrée invalide)
+    for (int i = 0; i < m->cacheSize; i++) {
+        m->cacheMapping[i] = -1;
+    }
+    // Remplit le cache pour chaque position d'entrée valide
+    for (int i = 0; i <= m->max_input_pos; i++) {
+        if (!isActuallyRemoved(m->root, m->NIL, i)) {
+            int out = i + getCumulativeDelta(m->root, m->NIL, i);
+            if (out < m->cacheSize)
+                m->cacheMapping[out] = i;
+        }
+    }
+    m->cacheValid = 1;
+}
 
 
 /// @brief Destroy the tree recursively
@@ -272,6 +310,11 @@ MAGIC MAGICinit()
     m->NIL->totalDelta = 0;
     m->NIL->left = m->NIL->right = m->NIL->parent = NULL;
     m->root = m->NIL;
+    m->max_input_pos = 0;
+    // Initialisation du cache
+    m->cacheMapping = NULL;
+    m->cacheSize = 0;
+    m->cacheValid = 0;
     return m;
 }
 
@@ -279,30 +322,52 @@ void MAGICadd(MAGIC m, int pos, int length)
 {
     assert(m && length > 0);
     int input_pos = MAGICmap(m, STREAM_OUT_IN, pos);
-    if (input_pos != -1) 
-    {
+    if (input_pos != -1) {
         insertDelta(m, input_pos, length);
-    } 
-    else 
-    {
-        for (int i = pos - 1; i >= 0; --i) 
-        {
-            int candidate = MAGICmap(m, STREAM_OUT_IN, i);
-            if (candidate != -1) 
-            {
-                insertDelta(m, candidate + 1, length);
-                return;
+    } else {
+        // Calcul de la position de sortie maximale actuelle.
+        int max_out = m->max_input_pos + getCumulativeDelta(m->root, m->NIL, m->max_input_pos);
+        // Si pos est supérieur à max_out, on étend le flux.
+        if (pos > max_out) {
+            input_pos = m->max_input_pos + (pos - max_out);
+            insertDelta(m, input_pos, length);
+        } else {
+            // Cas moins fréquent : on recherche un candidat en rétrogradant.
+            for (int i = pos - 1; i >= 0; --i) {
+                int candidate = MAGICmap(m, STREAM_OUT_IN, i);
+                if (candidate != -1) {
+                    insertDelta(m, candidate + 1, length);
+                    goto invalidate_cache;
+                }
             }
+            insertDelta(m, 0, length);
         }
-        insertDelta(m, 0, length);
     }
+    invalidate_cache:
+    m->cacheValid = 0; // Invalide le cache après modification
 }
 
 void MAGICremove(MAGIC m, int pos, int length)
 {
     assert(m && length > 0);
-
     int input_pos = MAGICmap(m, STREAM_OUT_IN, pos);
+    if (input_pos == -1) {
+        // Si pos est inférieur à la plus petite position de sortie valide,
+        // on considère que la suppression s'applique au début (input 0).
+        if (!m->cacheValid) {
+            updateCache(m);
+        }
+        int min_valid_out = -1;
+        for (int i = 0; i < m->cacheSize; i++) {
+            if (m->cacheMapping[i] != -1) {
+                min_valid_out = i;
+                break;
+            }
+        }
+        if (min_valid_out != -1 && pos < min_valid_out) {
+            input_pos = m->cacheMapping[min_valid_out];
+        }
+    }
     if (input_pos != -1)
     {
         insertDelta(m, input_pos, -length);
@@ -315,54 +380,53 @@ void MAGICremove(MAGIC m, int pos, int length)
             if (candidate != -1)
             {
                 insertDelta(m, candidate, -length);
-                return;
+                goto invalidate_cache2;
             }
         }
     }
+    invalidate_cache2:
+    m->cacheValid = 0; // Invalide le cache après modification
 }
 
 int MAGICmap(MAGIC m, enum MAGICDirection direction, int pos)
 {
     assert(m && pos >= 0);
-
+    
     if (direction == STREAM_IN_OUT) {
         if (isActuallyRemoved(m->root, m->NIL, pos)) return -1;
         return pos + getCumulativeDelta(m->root, m->NIL, pos);
     } else { // STREAM_OUT_IN
-        int low = 0, high = m->max_input_pos;
-        if (high < 10) high = 10;
-
-        while (low <= high) {
-            int mid = (low + high) / 2;
-
-            if (isActuallyRemoved(m->root, m->NIL, mid)) {
-                // saute les positions supprimées
-                if (mid == low) { low++; continue; }
-                if (mid == high) { high--; continue; }
-                int left = mid - 1, right = mid + 1;
-                while (left >= low || right <= high) {
-                    if (left >= low && !isActuallyRemoved(m->root, m->NIL, left)) {
-                        int mapped = left + getCumulativeDelta(m->root, m->NIL, left);
-                        if (mapped == pos) return left;
-                    }
-                    if (right <= high && !isActuallyRemoved(m->root, m->NIL, right)) {
-                        int mapped = right + getCumulativeDelta(m->root, m->NIL, right);
-                        if (mapped == pos) return right;
-                    }
-                    left--; right++;
-                }
-                break; // Aucun match possible autour
-            }
-
-            int mapped = mid + getCumulativeDelta(m->root, m->NIL, mid);
-            if (mapped == pos) return mid;
-            else if (mapped < pos) low = mid + 1;
-            else high = mid - 1;
+        // Si le cache n'est pas valide, on le met à jour.
+        if (!m->cacheValid) {
+            updateCache(m);
         }
-
-        return -1;
+        // Si pos est couvert par le cache, on le retourne.
+        if (pos < m->cacheSize)
+            return m->cacheMapping[pos];
+        else {
+            // Sinon, on effectue une recherche binaire sur un intervalle étendu.
+            int low = 0, high = pos + 100; // On étend la recherche d'une marge (ici 100).
+            int candidate = -1;
+            while (low <= high) {
+                int mid = (low + high) / 2;
+                int mapped = mid + getCumulativeDelta(m->root, m->NIL, mid);
+                if (mapped == pos) {
+                    candidate = mid;
+                    break;
+                } else if (mapped < pos) {
+                    low = mid + 1;
+                } else {
+                    high = mid - 1;
+                }
+            }
+            if (candidate != -1 && !isActuallyRemoved(m->root, m->NIL, candidate))
+                return candidate;
+            else
+                return -1;
+        }
     }
 }
+
 
 
 void MAGICdestroy(MAGIC m)
