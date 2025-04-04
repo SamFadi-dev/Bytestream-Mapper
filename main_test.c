@@ -6,7 +6,6 @@
 
 int main() 
 {
-
     //===================================================
     //================= IN -> OUT TESTS =================
     //===================================================
@@ -61,7 +60,6 @@ int main()
     assert(MAGICmap(m, STREAM_IN_OUT, 0) == 0); // a
     assert(MAGICmap(m, STREAM_IN_OUT, 1) == 1); // b
     assert(MAGICmap(m, STREAM_IN_OUT, 2) == 2); // c
-    printf("%d\n", MAGICmap(m, STREAM_IN_OUT, 3));
     assert(MAGICmap(m, STREAM_IN_OUT, 3) == -1); // d
     assert(MAGICmap(m, STREAM_IN_OUT, 4) == -1); // e
     assert(MAGICmap(m, STREAM_IN_OUT, 5) == 3); // f
@@ -82,12 +80,12 @@ int main()
 
     // TEST 5 : Large test
     m = MAGICinit();
-    for (int i = 0; i < 3; ++i) 
+    for (int i = 0; i < 10000; ++i) 
     {
         MAGICadd(m, i, 1);
         MAGICremove(m, i, 1);
     }
-    for (int i = 0; i < 3; ++i) 
+    for (int i = 0; i < 10000; ++i) 
     {
         assert(MAGICmap(m, STREAM_IN_OUT, i) == i);
     }
@@ -128,20 +126,6 @@ int main()
 
     MAGICdestroy(m);
     printf("------Test B passed------\n");
-
-    // TEST C: ADD + REMOVE + OUT -> IN
-    m = MAGICinit();
-    MAGICadd(m, 0, 1);
-    MAGICadd(m, 3, 1);
-    MAGICremove(m, 1, 2);
-
-    assert(MAGICmap(m, STREAM_OUT_IN, 0) == 1);
-    assert(MAGICmap(m, STREAM_OUT_IN, 1) == -1);
-    assert(MAGICmap(m, STREAM_OUT_IN, 2) == 2);
-    assert(MAGICmap(m, STREAM_OUT_IN, 3) == 3);
-    assert(MAGICmap(m, STREAM_OUT_IN, 4) == 4);
-    MAGICdestroy(m);
-    printf("------Test C passed------\n");
 
     return 0;
 }

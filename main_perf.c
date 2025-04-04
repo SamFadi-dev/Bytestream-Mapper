@@ -3,7 +3,8 @@
 #include <time.h>
 #include "magic.h"
 
-#define N 1000  // Number of operations for performance test
+// Number of operations for performance test
+#define N 1000000  
 
 int main()
 {
@@ -13,7 +14,8 @@ int main()
 
     // === TEST: MAGICadd ===
     start = clock();
-    for (int i = 0; i < N; ++i) {
+    for (int i = 0; i < N; ++i) 
+    {
         MAGICadd(m, i, 1);
     }
     end = clock();
@@ -22,7 +24,8 @@ int main()
 
     // === TEST: MAGICremove ===
     start = clock();
-    for (int i = 0; i < N; ++i) {
+    for (int i = 0; i < N; ++i) 
+    {
         MAGICremove(m, i, 1);
     }
     end = clock();
@@ -31,7 +34,8 @@ int main()
 
     // === TEST: MAGICmap IN → OUT ===
     start = clock();
-    for (int i = 0; i < N; ++i) {
+    for (int i = 0; i < N; ++i) 
+    {
         (void)MAGICmap(m, STREAM_IN_OUT, i);
     }
     end = clock();
@@ -40,7 +44,8 @@ int main()
 
     // === TEST: MAGICmap OUT → IN ===
     start = clock();
-    for (int i = 0; i < N; ++i) {
+    for (int i = 0; i < N; ++i) 
+    {
         (void)MAGICmap(m, STREAM_OUT_IN, i);
     }
     end = clock();

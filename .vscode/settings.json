@@ -1,5 +1,7 @@
 {
     "files.associations": {
-        "magic.h": "c"
+        "magic.h": "c",
+        "stdbool.h": "c",
+        "ctype.h": "c"
     }
 }
