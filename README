@@ -1,0 +1,60 @@
+# MAGIC Project
+
+This project implements a MAGIC data structure based on a red-black tree. It provides functionality to add, remove, and map positions in a stream.
+
+## Project Structure
+
+- `src/magic.c` and `src/magic.h`: Implementation of the MAGIC data structure.
+- `main_test.c`: Contains unit tests for the MAGIC data structure.
+- `main_perf.c`: Contains performance tests for the MAGIC data structure.
+- `Makefile`: Build and run automation for the project.
+
+## Prerequisites
+
+- GCC compiler (or any C compiler).
+- Make utility.
+- A terminal or command prompt.
+
+## Build Instructions
+
+1. Open a terminal or command prompt.
+2. Navigate to the project directory.
+3. Run the following command to build the project:
+   ```sh
+   make
+   ```
+
+## Running the Code
+
+### Run Unit Tests
+To execute the unit tests:
+```sh
+make test
+./test
+```
+
+### Run Performance Tests
+To execute the performance tests:
+```sh
+make perf
+./perf
+```
+
+### Run Both Tests
+To run both unit and performance tests:
+```sh
+make run
+```
+
+## Cleaning Up
+To clean up the build files and executables:
+```sh
+make cleanWin
+```
+or
+```sh
+make cleanLinux
+```
+
+## Notes
+- Ensure that the `gcc` compiler is installed and available in your system's PATH.

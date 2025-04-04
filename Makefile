@@ -29,5 +29,9 @@ run: test perf
 	./perf
 
 # Cleaning up for Windows
-clean:
+cleanWin:
 	del /Q *.o $(SRC)\*.o *.exe
+
+# Cleaning up for Linux
+cleanLinux:
+	rm -f *.o $(SRC)/*.o test perf
